@@ -1,0 +1,24 @@
+# render.yaml — One-click deploy to Render.com
+# Push this file + all project files to a GitHub repo,
+# then connect the repo at https://dashboard.render.com/new/web
+#
+# Free tier: 750 hrs/month, spins down after 15 min inactivity (cold start ~30s)
+# Starter tier ($7/mo): always-on, faster cold starts
+
+services:
+  - type: web
+    name: neighborhoodintel
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --timeout 60 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: FBI_API_KEY
+        sync: false          # Set this in the Render dashboard — keeps key out of git
+      - key: CACHE_TTL
+        value: "86400"       # 24 hour cache
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+    disk:
+      name: report-cache
+      mountPath: /opt/render/project/src/report_cache
+      sizeGB: 1              # Persistent disk for cached reports

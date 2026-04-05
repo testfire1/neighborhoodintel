@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeighborhoodIntel — Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#f1f5f9;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* NAV */
+  .nav{background:#1e293b;border-bottom:1px solid #334155;padding:0 24px;height:52px;display:flex;align-items:center;gap:20px;flex-shrink:0;}
+  .logo{font-size:.95rem;font-weight:800;letter-spacing:-.02em;}
+  .logo span{color:#3b82f6;}
+  .nav-tabs{display:flex;gap:2px;margin-left:12px;}
+  .nav-tab{padding:5px 14px;border-radius:6px;font-size:.82rem;color:#94a3b8;cursor:pointer;border:none;background:none;transition:all .15s;}
+  .nav-tab:hover{background:#334155;color:#f1f5f9;}
+  .nav-tab.active{background:#2563eb;color:white;}
+  .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .ws-key-area{display:flex;align-items:center;gap:8px;}
+  .ws-key-input{background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;padding:5px 10px;font-size:.78rem;width:180px;outline:none;}
+  .ws-key-input:focus{border-color:#3b82f6;}
+  .ws-key-input::placeholder{color:#475569;}
+  .btn-sm{padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:600;border:none;cursor:pointer;}
+  .btn-blue{background:#2563eb;color:white;}
+  .btn-blue:hover{background:#1d4ed8;}
+  .btn-ghost{background:transparent;color:#94a3b8;border:1px solid #334155;}
+  .btn-ghost:hover{background:#334155;color:#f1f5f9;}
+  .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;}
+
+  /* LAYOUT */
+  .body{display:flex;flex:1;overflow:hidden;}
+
+  /* SIDEBAR */
+  .sidebar{width:210px;background:#1e293b;border-right:1px solid #334155;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+  .sb-section{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#64748b;padding:16px 14px 6px;}
+  .sb-item{display:flex;align-items:center;gap:9px;padding:7px 12px;margin:0 4px;border-radius:7px;font-size:.82rem;color:#94a3b8;cursor:pointer;transition:all .15s;}
+  .sb-item:hover{background:#334155;color:#f1f5f9;}
+  .sb-item.active{background:#1d4ed8;color:white;}
+  .sb-icon{font-size:.9rem;width:18px;text-align:center;flex-shrink:0;}
+  .zip-tag{margin-left:auto;background:#334155;border-radius:8px;padding:1px 7px;font-size:.68rem;color:#94a3b8;}
+  .zip-tag.live{background:#14532d;color:#86efac;}
+
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* TOP BAR */
+  .topbar{background:#1e293b;border-bottom:1px solid #334155;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .zip-input{background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;padding:6px 12px;font-size:.85rem;width:130px;outline:none;}
+  .zip-input:focus{border-color:#3b82f6;}
+  .load-btn{background:#3b82f6;color:white;border:none;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:600;cursor:pointer;}
+  .load-btn:hover{background:#2563eb;}
+  .quick-tabs{display:flex;gap:5px;margin-left:4px;}
+  .qtab{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:4px 11px;font-size:.78rem;color:#94a3b8;cursor:pointer;transition:all .15s;}
+  .qtab:hover{border-color:#3b82f6;color:#60a5fa;}
+  .qtab.active{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa;}
+  .topbar-right{margin-left:auto;display:flex;gap:6px;}
+
+  /* VIEW TABS */
+  .view-tabs{display:flex;background:#0f172a;border-bottom:1px solid #1e293b;padding:0 20px;gap:0;flex-shrink:0;}
+  .vtab{padding:10px 18px;font-size:.82rem;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;}
+  .vtab:hover{color:#94a3b8;}
+  .vtab.active{color:#60a5fa;border-bottom-color:#3b82f6;}
+
+  /* PANELS */
+  .panels{flex:1;overflow:hidden;position:relative;}
+  .panel{display:none;width:100%;height:100%;}
+  .panel.active{display:flex;flex-direction:column;}
+
+  /* REPORT PANEL */
+  .report-iframe{flex:1;border:none;width:100%;display:block;}
+
+  /* LIVABILITY PANEL */
+  .livability-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;height:100%;overflow-y:auto;}
+  .lv-card{background:#1e293b;border-radius:12px;padding:18px;border:1px solid #334155;}
+  .lv-title{font-size:.82rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
+  .ws-widget-area{min-height:160px;display:flex;align-items:center;justify-content:center;}
+  .ws-placeholder{text-align:center;padding:20px;}
+  .ws-placeholder .icon{font-size:2.5rem;margin-bottom:10px;}
+  .ws-placeholder p{font-size:.82rem;color:#64748b;line-height:1.6;max-width:280px;margin:0 auto 12px;}
+  .ws-signup-btn{display:inline-block;background:#22c55e;color:white;padding:6px 16px;border-radius:7px;font-size:.8rem;font-weight:600;text-decoration:none;}
+  .leaflet-map{width:100%;height:240px;border-radius:8px;border:1px solid #334155;}
+  .score-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+  .score-chip{background:#0f172a;border-radius:8px;padding:12px;text-align:center;}
+  .score-chip .val{font-size:1.6rem;font-weight:800;color:#f1f5f9;}
+  .score-chip .lbl{font-size:.68rem;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;}
+  .score-chip .src{font-size:.65rem;color:#475569;margin-top:2px;}
+
+  /* LINKS PANEL */
+  .links-panel{padding:20px;overflow-y:auto;height:100%;}
+  .links-header{font-size:.88rem;color:#64748b;margin-bottom:20px;line-height:1.6;}
+  .links-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+  .link-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px;transition:all .2s;cursor:pointer;text-decoration:none;display:flex;flex-direction:column;gap:8px;}
+  .link-card:hover{border-color:#3b82f6;background:#1e3a5f;transform:translateY(-1px);}
+  .link-card .lc-header{display:flex;align-items:center;gap:10px;}
+  .link-card .lc-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+  .link-card .lc-name{font-size:.88rem;font-weight:700;color:#f1f5f9;}
+  .link-card .lc-desc{font-size:.76rem;color:#64748b;line-height:1.5;}
+  .link-card .lc-tags{display:flex;gap:5px;flex-wrap:wrap;}
+  .tag{font-size:.65rem;padding:2px 7px;border-radius:10px;font-weight:600;}
+  .tag-free{background:#14532d;color:#86efac;}
+  .tag-paid{background:#1e3a5f;color:#93c5fd;}
+  .tag-partial{background:#713f12;color:#fde68a;}
+  .tag-crime{background:#7f1d1d;color:#fca5a5;}
+  .tag-demo{background:#4c1d95;color:#c4b5fd;}
+  .tag-school{background:#0c4a6e;color:#bae6fd;}
+  .tag-walk{background:#14532d;color:#86efac;}
+  .open-arrow{margin-top:auto;font-size:.75rem;color:#3b82f6;font-weight:600;align-self:flex-end;}
+  .section-label{font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+
+  /* STATUS BAR */
+  .statusbar{background:#1e293b;border-top:1px solid #334155;padding:5px 18px;display:flex;align-items:center;gap:14px;font-size:.72rem;color:#64748b;flex-shrink:0;}
+  .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:4px;box-shadow:0 0 5px #22c55e88;}
+  .dot.warn{background:#f59e0b;box-shadow:0 0 5px #f59e0b88;}
+  code{background:#0f172a;padding:1px 5px;border-radius:3px;font-size:.7rem;color:#94a3b8;}
+
+  @media(max-width:800px){
+    .sidebar{display:none;}
+    .links-grid{grid-template-columns:1fr 1fr;}
+    .livability-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="logo">&#9656; Neighborhood<span>Intel</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active">Crime Reports</button>
+    <button class="nav-tab">Schools</button>
+    <button class="nav-tab">Demographics</button>
+    <button class="nav-tab">Compare</button>
+  </div>
+  <div class="nav-right">
+    <div class="ws-key-area">
+      <input class="ws-key-input" id="wsKey" placeholder="Walk Score API key (optional)" />
+      <button class="btn-sm btn-blue" onclick="applyWalkScore()">Apply</button>
+      <a href="https://www.walkscore.com/professional/api.php" target="_blank" class="btn-sm btn-ghost" title="Get free Walk Score key">Get key</a>
+    </div>
+    <div class="avatar">SB</div>
+  </div>
+</div>
+
+<div class="body">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-section">Saved ZIPs</div>
+    <div class="sb-item active" onclick="loadZip('60614','Lincoln Park, IL')">
+      <span class="sb-icon">&#128205;</span> Lincoln Park, IL
+      <span class="zip-tag live">60614</span>
+    </div>
+    <div class="sb-item" onclick="loadZip('60622','Wicker Park, IL')">
+      <span class="sb-icon">&#128205;</span> Wicker Park, IL
+      <span class="zip-tag">60622</span>
+    </div>
+    <div class="sb-item" onclick="loadZip('60647','Logan Square, IL')">
+      <span class="sb-icon">&#128205;</span> Logan Square, IL
+      <span class="zip-tag">60647</span>
+    </div>
+    <div class="sb-item" onclick="loadZip('94107','SoMa, SF')">
+      <span class="sb-icon">&#128205;</span> SoMa, SF
+      <span class="zip-tag">94107</span>
+    </div>
+    <div class="sb-item" onclick="loadZip('11215','Park Slope, NY')">
+      <span class="sb-icon">&#128205;</span> Park Slope, NY
+      <span class="zip-tag">11215</span>
+    </div>
+    <div class="sb-item" onclick="loadZip('10001','Chelsea, NY')">
+      <span class="sb-icon">&#128205;</span> Chelsea, NY
+      <span class="zip-tag">10001</span>
+    </div>
+
+    <div class="sb-section">Quick Actions</div>
+    <div class="sb-item"><span class="sb-icon">&#9654;</span> Run new ZIP</div>
+    <div class="sb-item"><span class="sb-icon">&#128260;</span> Refresh all</div>
+    <div class="sb-item"><span class="sb-icon">&#128229;</span> Export CSV</div>
+
+    <div class="sb-section">External</div>
+    <div class="sb-item" onclick="switchTab('links')"><span class="sb-icon">&#128279;</span> All site links</div>
+    <div class="sb-item" onclick="switchTab('livability')"><span class="sb-icon">&#127974;</span> Livability data</div>
+    <div class="sb-item"><span class="sb-icon">&#128273;</span> API Keys</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <span style="font-size:.8rem;color:#64748b;">ZIP:</span>
+      <input class="zip-input" id="zipInput" value="60614" onkeydown="if(event.key==='Enter') loadFromInput()" />
+      <button class="load-btn" onclick="loadFromInput()">Load</button>
+      <div class="quick-tabs">
+        <div class="qtab active" id="qt-60614" onclick="quickTab(this,'60614','Lincoln Park, IL')">60614</div>
+        <div class="qtab" id="qt-60622" onclick="quickTab(this,'60622','Wicker Park, IL')">60622</div>
+        <div class="qtab" id="qt-94107" onclick="quickTab(this,'94107','SoMa, SF')">94107</div>
+        <div class="qtab" id="qt-11215" onclick="quickTab(this,'11215','Park Slope, NY')">11215</div>
+        <div class="qtab" id="qt-10001" onclick="quickTab(this,'10001','Chelsea, NY')">10001</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-sm btn-ghost" onclick="switchTab('report')">&#128200; Full Report</button>
+        <button class="btn-sm btn-ghost" onclick="switchTab('livability')">&#127974; Livability</button>
+        <button class="btn-sm btn-ghost" onclick="switchTab('links')">&#128279; Quick Links</button>
+      </div>
+    </div>
+
+    <!-- VIEW TABS -->
+    <div class="view-tabs">
+      <div class="vtab active" id="vt-report" onclick="switchTab('report')">&#128200; Crime Report</div>
+      <div class="vtab" id="vt-livability" onclick="switchTab('livability')">&#127974; Livability &amp; Maps</div>
+      <div class="vtab" id="vt-links" onclick="switchTab('links')">&#128279; Research Links</div>
+    </div>
+
+    <!-- PANELS -->
+    <div class="panels">
+
+      <!-- PANEL: Crime Report -->
+      <div class="panel active" id="panel-report">
+        <iframe class="report-iframe" id="reportFrame" src="crime_report_60614.html"
+          sandbox="allow-scripts allow-same-origin" title="Neighborhood Crime Report"></iframe>
+      </div>
+
+      <!-- PANEL: Livability & Maps -->
+      <div class="panel" id="panel-livability">
+        <div class="livability-grid">
+
+          <!-- Walk Score Widget -->
+          <div class="lv-card">
+            <div class="lv-title">&#128694; Walk / Transit / Bike Score</div>
+            <div class="ws-widget-area" id="wsWidgetArea">
+              <div class="ws-placeholder">
+                <div class="icon">&#128694;</div>
+                <p><strong style="color:#f1f5f9;">Walk / Transit / Bike Scores</strong><br>Free widget — paste your API key in the bar above and hit Apply.</p>
+                <a href="https://www.walkscore.com/professional/api.php" target="_blank" class="ws-signup-btn">Get Free API Key ↗</a>
+                <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;width:100%;max-width:260px;margin-left:auto;margin-right:auto;">
+                  <a id="wsDirectLink" href="https://www.walkscore.com/IL/Chicago/60614" target="_blank"
+                    style="display:block;text-align:center;background:#0f172a;border:1px solid #334155;border-radius:7px;padding:8px 12px;font-size:.8rem;color:#60a5fa;text-decoration:none;">
+                    &#128279; View scores on WalkScore.com ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leaflet Street Map -->
+          <div class="lv-card">
+            <div class="lv-title">&#128506; Street Map</div>
+            <div id="streetMap" class="leaflet-map"></div>
+          </div>
+
+          <!-- Scores summary -->
+          <div class="lv-card">
+            <div class="lv-title">&#128200; Area Scores</div>
+            <div class="score-row">
+              <div class="score-chip"><div class="val" id="sc-safety">72</div><div class="lbl">Safety</div><div class="src">FBI Data</div></div>
+              <div class="score-chip"><div class="val" id="sc-walk">--</div><div class="lbl">Walk</div><div class="src">Walk Score</div></div>
+              <div class="score-chip"><div class="val" id="sc-transit">--</div><div class="lbl">Transit</div><div class="src">Walk Score</div></div>
+            </div>
+            <div style="font-size:.75rem;color:#475569;line-height:1.6;">
+              Safety score derived from FBI crime data. Walk/Transit scores require a free Walk Score API key entered above.
+            </div>
+            <div style="margin-top:12px;">
+              <a id="avLink" href="https://www.areavibes.com/chicago-il/lincoln+park/livability/" target="_blank"
+                style="display:block;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#f1f5f9;text-decoration:none;margin-bottom:8px;transition:border .15s;"
+                onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#334155'">
+                &#128279; View full livability breakdown on AreaVibes →
+              </a>
+              <a id="ngLink" href="https://www.niche.com/places-to-live/search/best-places-to-live/zip/60614/" target="_blank"
+                style="display:block;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#f1f5f9;text-decoration:none;transition:border .15s;"
+                onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#334155'">
+                &#128279; View grades &amp; rankings on Niche →
+              </a>
+            </div>
+          </div>
+
+          <!-- Leaflet Satellite / Topo View -->
+          <div class="lv-card">
+            <div class="lv-title">&#127759; Topo / Satellite View</div>
+            <div id="topoMap" class="leaflet-map"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PANEL: Research Links -->
+      <div class="panel" id="panel-links">
+        <div class="links-panel">
+          <p class="links-header">
+            Direct links to the best neighborhood research sites — all pre-loaded with the current ZIP.
+            Click any card to open in a new tab. Most sites block iframe embedding but work perfectly as deep links.
+          </p>
+
+          <div class="section-label">Crime &amp; Safety</div>
+          <div class="links-grid" id="crimeLinks"></div>
+
+          <div class="section-label">Neighborhood Profiles</div>
+          <div class="links-grid" id="profileLinks"></div>
+
+          <div class="section-label">Government &amp; Open Data</div>
+          <div class="links-grid" id="govLinks"></div>
+        </div>
+      </div>
+
+    </div><!-- /panels -->
+
+    <!-- STATUS BAR -->
+    <div class="statusbar">
+      <span><span class="dot"></span>Connected</span>
+      <span>|</span>
+      <span id="sb-zip">ZIP 60614 &middot; Lincoln Park, IL</span>
+      <span>|</span>
+      <span>FBI Crime Data &middot; Chicago Open Data &middot; OpenStreetMap</span>
+      <span style="margin-left:auto;" id="sb-ws">Walk Score: <span style="color:#f59e0b;">&#9888; key needed</span></span>
+    </div>
+  </div>
+
+</div><!-- /body -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentZip  = '60614';
+let currentCity = 'Chicago';
+let currentState = 'IL';
+let currentLabel = 'Lincoln Park, IL';
+let wsApiKey = '';
+
+// API base URL — set to your deployed API (e.g. https://neighborhoodintel.onrender.com)
+// Leave empty to use local files only
+const API_BASE = window.NEIGHBORHOODINTEL_API || '';
+
+// ZIPs with pre-generated local reports (fallback when no API is set)
+const LOCAL_REPORTS = {
+  '60614': 'crime_report_60614.html',
+  '60622': 'crime_report_60622.html',
+  '60647': 'crime_report_60647.html',
+  '94107': 'crime_report_94107.html',
+  '11215': 'crime_report_11215.html',
+  '10001': 'crime_report_10001.html',
+};
+
+// ZIP → city/state metadata for URL construction
+const ZIP_META = {
+  '60614': { city:'Chicago',      state:'IL', stateF:'illinois',  citySlug:'chicago-il',  neighborhood:'lincoln+park' },
+  '60622': { city:'Chicago',      state:'IL', stateF:'illinois',  citySlug:'chicago-il',  neighborhood:'wicker+park'  },
+  '60647': { city:'Chicago',      state:'IL', stateF:'illinois',  citySlug:'chicago-il',  neighborhood:'logan+square' },
+  '94107': { city:'San Francisco',state:'CA', stateF:'california',citySlug:'san-francisco-ca', neighborhood:'soma'   },
+  '11215': { city:'Brooklyn',     state:'NY', stateF:'new-york',  citySlug:'brooklyn-ny', neighborhood:'park-slope'  },
+  '10001': { city:'New York',     state:'NY', stateF:'new-york',  citySlug:'new-york-ny', neighborhood:'chelsea'     },
+};
+
+// ── Link definitions ───────────────────────────────────────────────────────
+function buildLinks(zip) {
+  const m = ZIP_META[zip] || { city:'', state:'', stateF:'', citySlug:'', neighborhood:'' };
+  const city  = m.city;
+  const state = m.state;
+  const sf    = m.stateF;
+  const cs    = m.citySlug;
+  const nb    = m.neighborhood;
+  const cityLo = city.toLowerCase().replace(/ /g,'-');
+
+  return {
+    crime: [
+      { name:'CrimeGrade',
+        icon:'🔴', bg:'#7f1d1d',
+        desc:'Letter-grade safety scores by neighborhood. A–F ratings for violent, property, and overall crime.',
+        tags:['free','crime'],
+        url: `https://crimegrade.org/safest-places-in-${cityLo}-${state.toLowerCase()}/` },
+      { name:'CrimeMapping',
+        icon:'🗺', bg:'#1e3a5f',
+        desc:'Real-time crime maps fed directly by police departments. Filter by offense type and date.',
+        tags:['free','crime'],
+        url: `https://www.crimemapping.com/map?AddressBuffer=500&loctype=ZipCode&loc=${zip}&locname=${zip}` },
+      { name:'SpotCrime',
+        icon:'📍', bg:'#7f1d1d',
+        desc:'Aggregated police blotter & news crime reports. Set email alerts for your area.',
+        tags:['free','crime'],
+        url: `https://spotcrime.com/crimes?lat=0&lon=0&radius=0.02&zip=${zip}` },
+      { name:'Community Crime Map',
+        icon:'🏛', bg:'#1e3a5f',
+        desc:'LexisNexis-powered crime map with agency data. Search by address or ZIP.',
+        tags:['free','crime'],
+        url: `https://communitycrimemap.com/?address=${zip}` },
+      { name:'FBI Crime Explorer',
+        icon:'🏛', bg:'#374151',
+        desc:'Official FBI UCR/NIBRS data. Annual city-level crime stats going back decades.',
+        tags:['free','crime','gov'],
+        url: `https://cde.ucr.cjis.gov/LATEST/webapp/#/pages/explorer/crime/crime-trend` },
+      { name:'Our Crime Report',
+        icon:'📊', bg:'#14532d',
+        desc:'Your generated report for this ZIP — built from FBI + city open data. Fully embeddable.',
+        tags:['free','crime','built'],
+        url: REPORTS[zip] || `#` },
+    ],
+    profiles: [
+      { name:'AreaVibes',
+        icon:'🌟', bg:'#1e3a5f',
+        desc:'Livability score covering crime, cost of living, schools, weather, and amenities.',
+        tags:['free','full profile'],
+        url: `https://www.areavibes.com/${cs}/${nb}/livability/` },
+      { name:'Niche',
+        icon:'🏆', bg:'#4c1d95',
+        desc:'A–F grades for neighborhoods across crime, schools, nightlife, diversity, and more.',
+        tags:['free','full profile','schools'],
+        url: `https://www.niche.com/places-to-live/search/best-places-to-live/zip/${zip}/` },
+      { name:'City-Data',
+        icon:'📋', bg:'#374151',
+        desc:'Deep demographic, income, housing, and crime data for every US ZIP code.',
+        tags:['free','full profile'],
+        url: `https://www.city-data.com/zips/${zip}.html` },
+      { name:'BestPlaces',
+        icon:'📌', bg:'#374151',
+        desc:'Side-by-side city comparisons: cost of living, crime, climate, jobs, and more.',
+        tags:['free','full profile'],
+        url: `https://www.bestplaces.net/zip-code/${sf}/${cityLo}/${zip}` },
+      { name:'Walk Score',
+        icon:'🚶', bg:'#14532d',
+        desc:'Walk Score, Transit Score, and Bike Score. Neighborhood map + commute tools.',
+        tags:['free','walkability'],
+        url: `https://www.walkscore.com/${state}/${city.replace(/ /g,'_')}` },
+      { name:'NeighborhoodScout',
+        icon:'🔍', bg:'#374151',
+        desc:'Detailed crime risk scores and neighborhood comparisons. Some data is paywalled.',
+        tags:['partial','full profile'],
+        url: `https://www.neighborhoodscout.com/${sf.replace(/-/g,'+')}/${cityLo}` },
+    ],
+    gov: [
+      { name:'Census Reporter',
+        icon:'📊', bg:'#1e3a5f',
+        desc:'Beautiful Census data explorer — income, age, education, housing at ZIP level.',
+        tags:['free','gov','demographics'],
+        url: `https://censusreporter.org/profiles/86000US${zip}-${zip}/` },
+      { name:'Census.gov Data',
+        icon:'🏛', bg:'#374151',
+        desc:'Official US Census Bureau — American Community Survey and Decennial Census.',
+        tags:['free','gov'],
+        url: `https://data.census.gov/cedsci/profile?q=${zip}` },
+      { name:'EPA EJScreen',
+        icon:'🌿', bg:'#14532d',
+        desc:'Environmental justice data — pollution, demographics, health risk by ZIP/tract.',
+        tags:['free','gov','environment'],
+        url: `https://ejscreen.epa.gov/mapper/?location=${zip}` },
+      { name:'HUD Fair Market Rents',
+        icon:'🏠', bg:'#1e3a5f',
+        desc:'Fair market rent data by ZIP and metro area. Published annually by HUD.',
+        tags:['free','gov','housing'],
+        url: `https://www.huduser.gov/portal/datasets/fmr.html` },
+      { name:'CDC PLACES',
+        icon:'🏥', bg:'#374151',
+        desc:'Health outcomes by census tract — chronic disease rates, mental health, behaviors.',
+        tags:['free','gov','health'],
+        url: `https://chronicdata.cdc.gov/500-Cities-Places/PLACES-Local-Data-for-Better-Health-Place-Data-202/eav7-hnsx` },
+      { name:'Google Maps',
+        icon:'🗺', bg:'#1e3a5f',
+        desc:'Street view, satellite, transit maps. Always embeddable, no API key for basic use.',
+        tags:['free','maps'],
+        url: `https://www.google.com/maps/search/${zip}` },
+    ]
+  };
+}
+
+// ── Render link cards ──────────────────────────────────────────────────────
+function renderLinks(zip) {
+  const data = buildLinks(zip);
+  ['crime','profiles','gov'].forEach((key, i) => {
+    const containerId = ['crimeLinks','profileLinks','govLinks'][i];
+    const container = document.getElementById(containerId);
+    container.innerHTML = data[key].map(link => {
+      const tags = link.tags.map(t => {
+        const cls = t==='free'?'tag-free':t==='paid'?'tag-paid':t==='partial'?'tag-partial':
+                    t==='crime'?'tag-crime':t==='schools'?'tag-school':t==='walkability'||t==='walk'?'tag-walk':
+                    t==='built'?'tag-demo':'tag-free';
+        return `<span class="tag ${cls}">${t}</span>`;
+      }).join('');
+      return `
+        <a class="link-card" href="${link.url}" target="_blank" rel="noopener">
+          <div class="lc-header">
+            <div class="lc-icon" style="background:${link.bg};">${link.icon}</div>
+            <div class="lc-name">${link.name}</div>
+          </div>
+          <div class="lc-desc">${link.desc}</div>
+          <div class="lc-tags">${tags}</div>
+          <div class="open-arrow">Open ↗</div>
+        </a>`;
+    }).join('');
+  });
+}
+
+// ── Walk Score widget ──────────────────────────────────────────────────────
+function applyWalkScore() {
+  const key = document.getElementById('wsKey').value.trim();
+  if (!key) { alert('Please enter your Walk Score API key.'); return; }
+  wsApiKey = key;
+  renderWalkScore();
+  document.getElementById('sb-ws').innerHTML = 'Walk Score: <span style="color:#22c55e;">&#10003; Active</span>';
+}
+
+function renderWalkScore() {
+  const area = document.getElementById('wsWidgetArea');
+  // Walk Score JS widget — requires valid WSID from their professional API
+  area.innerHTML = `
+    <div style="width:100%;">
+      <div id="ws-widget"></div>
+      <script type="text/javascript">
+        var ws_wsid = '${wsApiKey}';
+        var ws_address = '${currentZip}';
+        var ws_city    = '${currentCity}';
+        var ws_state   = '${currentState}';
+        var ws_zip     = '${currentZip}';
+        var ws_country = 'US';
+        var ws_width   = '100%';
+        var ws_height  = 'auto';
+      <\/script>
+      <script type="text/javascript" src="https://www.walkscore.com/tile/show-tile.php"><\/script>
+    </div>`;
+}
+
+// ── ZIP loading & navigation ───────────────────────────────────────────────
+function loadZip(zip, label) {
+  currentZip   = zip;
+  currentLabel = label;
+  const meta   = ZIP_META[zip] || {};
+  currentCity  = meta.city  || '';
+  currentState = meta.state || '';
+
+  document.getElementById('zipInput').value = zip;
+  document.getElementById('sb-zip').textContent = 'ZIP ' + zip + ' \u00b7 ' + label;
+
+  // Update sidebar active state
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(el => {
+    if (el.textContent.includes(zip)) el.classList.add('active');
+  });
+
+  // Update quick tabs
+  document.querySelectorAll('.qtab').forEach(t => t.classList.remove('active'));
+  const qt = document.getElementById('qt-' + zip);
+  if (qt) qt.classList.add('active');
+
+  // Load report iframe — use live API if configured, else local file, else show prompt
+  const frame = document.getElementById('reportFrame');
+  if (API_BASE) {
+    // Live API — works for any ZIP
+    frame.src = `${API_BASE}/report/${zip}`;
+  } else if (LOCAL_REPORTS[zip]) {
+    // Local pre-generated file
+    frame.src = LOCAL_REPORTS[zip];
+  } else {
+    // No API, no local file — show helpful prompt
+    frame.srcdoc = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100vh;background:#0f172a;color:#94a3b8;text-align:center;gap:16px;font-family:-apple-system,sans-serif;padding:40px;">
+      <div style="font-size:3rem;">🚀</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;">Connect the live API to load any ZIP</div>
+      <div style="font-size:.85rem;max-width:420px;line-height:1.7;color:#64748b;">
+        Deploy the Flask API and set <code style="background:#1e293b;padding:2px 8px;border-radius:4px;color:#60a5fa;">API_BASE</code>
+        to get on-demand reports for all 42,000 US ZIP codes.
+      </div>
+      <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px 24px;font-size:.8rem;text-align:left;max-width:440px;line-height:2;">
+        <div style="color:#94a3b8;">1. Deploy to Render/Railway (see SETUP_GUIDE.md)</div>
+        <div style="color:#94a3b8;">2. Add one line before this dashboard loads:</div>
+        <code style="color:#60a5fa;">window.NEIGHBORHOODINTEL_API = 'https://your-app.onrender.com'</code>
+      </div>
+      <div style="font-size:.78rem;color:#475569;">Or run locally: <code style="background:#1e293b;padding:2px 8px;border-radius:4px;color:#60a5fa;">python app.py</code> → set API_BASE to http://localhost:5000</div>
+    </div>`;
+  }
+
+  // Update Leaflet maps
+  const coords = ZIP_COORDS[zip];
+  if (coords) {
+    updateMaps(coords[0], coords[1]);
+  } else {
+    // Geocode unknown ZIP via Nominatim
+    fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`, {
+      headers: { 'User-Agent': 'NeighborhoodIntel/1.0' }
+    }).then(r => r.json()).then(d => {
+      if (d && d[0]) updateMaps(parseFloat(d[0].lat), parseFloat(d[0].lon));
+    }).catch(() => {});
+  }
+
+  // Update Walk Score direct link
+  const wsEl = document.getElementById('wsDirectLink');
+  if (wsEl && meta) wsEl.href = `https://www.walkscore.com/${meta.state}/${meta.city.replace(/ /g,'_')}/${zip}`;
+
+  // Update AreaVibes / Niche links
+  if (meta.citySlug && meta.neighborhood) {
+    document.getElementById('avLink').href = `https://www.areavibes.com/${meta.citySlug}/${meta.neighborhood}/livability/`;
+  }
+  document.getElementById('ngLink').href = `https://www.niche.com/places-to-live/search/best-places-to-live/zip/${zip}/`;
+
+  // Re-render link cards
+  renderLinks(zip);
+
+  // Re-render Walk Score if key is set
+  if (wsApiKey) renderWalkScore();
+}
+
+function loadFromInput() {
+  const zip = document.getElementById('zipInput').value.trim();
+  if (!zip || zip.length < 5) return;
+  const meta  = ZIP_META[zip];
+  const label = meta ? (meta.neighborhood.replace(/\+/g,' ').replace(/\b\w/g,l=>l.toUpperCase()) + ', ' + meta.state) : zip;
+  loadZip(zip, label);
+}
+
+function quickTab(el, zip, label) {
+  document.querySelectorAll('.qtab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('zipInput').value = zip;
+  loadZip(zip, label);
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('vt-' + name).classList.add('active');
+}
+
+// ── ZIP coordinate lookup (lat, lon) ──────────────────────────────────────
+const ZIP_COORDS = {
+  '60614': [41.9250, -87.6481],
+  '60622': [41.9082, -87.6774],
+  '60647': [41.9217, -87.7008],
+  '94107': [37.7785, -122.3893],
+  '11215': [40.6688, -73.9826],
+  '10001': [40.7484, -73.9967],
+};
+
+// ── Leaflet map instances ──────────────────────────────────────────────────
+let streetMapL = null;
+let topoMapL   = null;
+
+function initMaps(lat, lon) {
+  const osm  = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OSM</a>', maxZoom: 19
+  });
+  const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://opentopomap.org">OpenTopoMap</a>', maxZoom: 17
+  });
+
+  streetMapL = L.map('streetMap', { zoomControl: true, scrollWheelZoom: false })
+    .setView([lat, lon], 14);
+  osm.addTo(streetMapL);
+  L.marker([lat, lon]).addTo(streetMapL);
+
+  topoMapL = L.map('topoMap', { zoomControl: true, scrollWheelZoom: false })
+    .setView([lat, lon], 13);
+  topo.addTo(topoMapL);
+  L.marker([lat, lon]).addTo(topoMapL);
+}
+
+function updateMaps(lat, lon) {
+  if (!streetMapL) { initMaps(lat, lon); return; }
+  const ll = [lat, lon];
+  streetMapL.setView(ll, 14);
+  streetMapL.eachLayer(l => { if (l instanceof L.Marker) streetMapL.removeLayer(l); });
+  L.marker(ll).addTo(streetMapL);
+
+  topoMapL.setView(ll, 13);
+  topoMapL.eachLayer(l => { if (l instanceof L.Marker) topoMapL.removeLayer(l); });
+  L.marker(ll).addTo(topoMapL);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+renderLinks('60614');
+
+// Init maps after a short delay to ensure the panel DOM is ready
+setTimeout(() => {
+  const c = ZIP_COORDS['60614'];
+  initMaps(c[0], c[1]);
+}, 300);
+</script>
+</body>
+</html>
