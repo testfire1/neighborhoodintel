@@ -49,7 +49,7 @@ except ImportError:
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-FBI_BASE    = "https://api.usa.gov/crime/fbi/sapi/api"
+FBI_BASE    = "https://api.usa.gov/crime/fbi/cde"
 NOMINATIM   = "https://nominatim.openstreetmap.org"
 UA          = "NeighborhoodCrimeReporter/1.0 (open-source; github.com)"
 
@@ -198,7 +198,7 @@ def geocode_zip(zip_code):
 
 # ─── FBI Crime Data ───────────────────────────────────────────────────────────
 
-def fetch_fbi_data(state_abbr, city, api_key, start=2018, end=2022):
+def fetch_fbi_data(state_abbr, city, api_key, start=2019, end=2023):
     """Fetch summarized offense data from FBI Crime Data Explorer API."""
     print(f"  [2/3] Fetching FBI crime data for {city}, {state_abbr}...")
     city_enc = city.replace(" ", "%20")
