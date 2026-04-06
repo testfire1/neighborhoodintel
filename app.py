@@ -167,6 +167,15 @@ def dashboard():
     return redirect("/")
 
 
+@app.route("/widget")
+def widget():
+    """Serve the embeddable ZIP search widget."""
+    p = Path("neighborhoodintel-widget.html")
+    if p.exists():
+        return Response(p.read_text(encoding="utf-8"), mimetype="text/html")
+    return redirect("/")
+
+
 @app.route("/report/<zip_code>")
 def report(zip_code: str):
     """Return a full HTML crime report for a ZIP code."""
