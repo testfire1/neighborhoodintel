@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeighborhoodIntel Widget</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── Widget Container ─────────────────────────────────────── */
+  .ni-widget {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+
+  /* ── Header / Search Bar ──────────────────────────────────── */
+  .ni-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    padding: 28px 32px 24px;
+  }
+
+  .ni-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .ni-brand-name {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #f1f5f9;
+    letter-spacing: -0.02em;
+  }
+
+  .ni-brand-name span { color: #60a5fa; }
+
+  .ni-tagline {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  .ni-search-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .ni-input-wrap {
+    position: relative;
+    flex: 1;
+    max-width: 320px;
+  }
+
+  .ni-input-wrap svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    pointer-events: none;
+  }
+
+  .ni-input {
+    width: 100%;
+    padding: 13px 16px 13px 42px;
+    background: rgba(255,255,255,0.08);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    color: #f1f5f9;
+    font-size: 1rem;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .ni-input::placeholder { color: #64748b; font-weight: 400; letter-spacing: 0; }
+  .ni-input:focus {
+    border-color: #3b82f6;
+    background: rgba(255,255,255,0.12);
+  }
+
+  .ni-btn {
+    padding: 13px 24px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .ni-btn:hover { background: #1d4ed8; }
+  .ni-btn:active { transform: scale(0.98); }
+  .ni-btn:disabled { background: #334155; cursor: not-allowed; }
+
+  /* ── Quick ZIP chips ──────────────────────────────────────── */
+  .ni-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .ni-chip {
+    padding: 5px 12px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .ni-chip:hover {
+    background: rgba(59,130,246,0.2);
+    border-color: #3b82f6;
+    color: #93c5fd;
+  }
+
+  /* ── Status bar ───────────────────────────────────────────── */
+  .ni-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 32px;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    color: #64748b;
+    min-height: 40px;
+  }
+
+  .ni-status.loading { color: #2563eb; }
+  .ni-status.error { color: #dc2626; background: #fef2f2; }
+  .ni-status.success { color: #16a34a; }
+
+  .ni-spinner {
+    width: 14px; height: 14px;
+    border: 2px solid #bfdbfe;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Report iframe ────────────────────────────────────────── */
+  .ni-frame-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .ni-frame-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    height: 480px;
+    background: #f8fafc;
+    color: #94a3b8;
+    text-align: center;
+    padding: 32px;
+  }
+
+  .ni-frame-placeholder .icon {
+    font-size: 3rem;
+    opacity: 0.4;
+  }
+
+  .ni-frame-placeholder p {
+    font-size: 0.9rem;
+    max-width: 280px;
+    line-height: 1.6;
+  }
+
+  .ni-frame-placeholder .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .ni-frame-placeholder .ex {
+    padding: 5px 14px;
+    background: #e2e8f0;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .ni-frame-placeholder .ex:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .ni-iframe {
+    display: none;
+    width: 100%;
+    height: 860px;
+    border: none;
+  }
+
+  .ni-iframe.visible { display: block; }
+
+  /* ── Footer ───────────────────────────────────────────────── */
+  .ni-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 32px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ni-footer-left {
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+
+  .ni-footer-left a {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+
+  .ni-copy-btn {
+    padding: 6px 14px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ni-copy-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .ni-copy-btn.copied {
+    background: #dcfce7;
+    color: #16a34a;
+    border-color: #bbf7d0;
+  }
+
+  /* ── Embed Code Panel ─────────────────────────────────────── */
+  .ni-embed-panel {
+    display: none;
+    background: #0f172a;
+    padding: 20px 32px;
+    border-top: 1px solid #1e293b;
+  }
+
+  .ni-embed-panel.visible { display: block; }
+
+  .ni-embed-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .ni-embed-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .ni-embed-tab {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .ni-embed-tab.active {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-color: #334155;
+  }
+
+  .ni-embed-code {
+    background: #1e293b;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Menlo', 'Monaco', monospace;
+    font-size: 0.75rem;
+    color: #93c5fd;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+    position: relative;
+  }
+
+  .ni-copy-code-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+    background: #334155;
+    border: none;
+    border-radius: 5px;
+    color: #94a3b8;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .ni-copy-code-btn:hover { background: #475569; color: #f1f5f9; }
+
+  /* ── Responsive ───────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .ni-header { padding: 20px; }
+    .ni-search-row { flex-direction: column; align-items: stretch; }
+    .ni-input-wrap { max-width: 100%; }
+    .ni-footer { padding: 12px 20px; }
+    .ni-embed-panel { padding: 16px 20px; }
+    .ni-status { padding: 10px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ni-widget" id="niWidget">
+
+  <!-- Header + Search -->
+  <div class="ni-header">
+    <div class="ni-brand">
+      <div>
+        <div class="ni-brand-name">Neighborhood<span>Intel</span></div>
+        <div class="ni-tagline">Free crime & safety reports for any US ZIP code</div>
+      </div>
+    </div>
+
+    <div class="ni-search-row">
+      <div class="ni-input-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          id="niZipInput"
+          class="ni-input"
+          type="text"
+          placeholder="Enter ZIP code (e.g. 94025)"
+          maxlength="5"
+          inputmode="numeric"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter') niSearch()"
+        />
+      </div>
+      <button class="ni-btn" id="niSearchBtn" onclick="niSearch()">Search →</button>
+    </div>
+
+    <div class="ni-chips">
+      <span class="ni-chip" onclick="niLoad('60614')">60614 · Lincoln Park</span>
+      <span class="ni-chip" onclick="niLoad('94107')">94107 · SoMa SF</span>
+      <span class="ni-chip" onclick="niLoad('10001')">10001 · Chelsea NYC</span>
+      <span class="ni-chip" onclick="niLoad('90210')">90210 · Beverly Hills</span>
+      <span class="ni-chip" onclick="niLoad('78701')">78701 · Austin TX</span>
+      <span class="ni-chip" onclick="niLoad('98101')">98101 · Seattle</span>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="ni-status" id="niStatus">
+    <span id="niStatusText">Enter any US ZIP code above to generate a crime & safety report.</span>
+  </div>
+
+  <!-- Report Frame -->
+  <div class="ni-frame-wrap">
+    <div class="ni-frame-placeholder" id="niPlaceholder">
+      <div class="icon">🗺️</div>
+      <p>Search any US ZIP code to see FBI crime data, live incidents, interactive maps, and a neighborhood safety score.</p>
+      <div class="examples">
+        <span class="ex" onclick="niLoad('94025')">94025 · Menlo Park</span>
+        <span class="ex" onclick="niLoad('10022')">10022 · Midtown NYC</span>
+        <span class="ex" onclick="niLoad('60611')">60611 · Streeterville</span>
+        <span class="ex" onclick="niLoad('30301')">30301 · Atlanta</span>
+        <span class="ex" onclick="niLoad('77001')">77001 · Houston</span>
+      </div>
+    </div>
+    <iframe
+      id="niFrame"
+      class="ni-iframe"
+      title="NeighborhoodIntel Report"
+    ></iframe>
+  </div>
+
+  <!-- Footer -->
+  <div class="ni-footer">
+    <div class="ni-footer-left">
+      Powered by <a href="https://neighborhoodintel.onrender.com" target="_blank">NeighborhoodIntel</a>
+      · FBI Crime Data · OpenStreetMap · Socrata Open Data
+    </div>
+    <button class="ni-copy-btn" id="niEmbedToggle" onclick="niToggleEmbed()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+      </svg>
+      Get embed code
+    </button>
+  </div>
+
+  <!-- Embed Code Panel -->
+  <div class="ni-embed-panel" id="niEmbedPanel">
+    <div class="ni-embed-title">Embed this widget</div>
+    <div class="ni-embed-tabs">
+      <div class="ni-embed-tab active" onclick="niEmbedTab('widget', this)">Full Widget</div>
+      <div class="ni-embed-tab" onclick="niEmbedTab('iframe', this)">Simple iframe</div>
+      <div class="ni-embed-tab" onclick="niEmbedTab('react', this)">React</div>
+    </div>
+    <div style="position:relative;">
+      <pre class="ni-embed-code" id="niEmbedCode"></pre>
+      <button class="ni-copy-code-btn" id="niCopyCode" onclick="niCopyCode()">Copy</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'https://neighborhoodintel.onrender.com';
+  let currentZip = '';
+  let embedVisible = false;
+  let currentEmbedType = 'widget';
+
+  const EMBED_TEMPLATES = {
+    widget: `<!-- NeighborhoodIntel Widget -->
+<!-- Paste this anywhere in your HTML -->
+<script src="https://neighborhoodintel.onrender.com/widget.js"><\/script>
+<div id="ni-widget" data-zip=""></div>
+
+<!-- Or use the full standalone widget file -->
+<!-- Download: neighborhoodintel-widget.html -->`,
+
+    iframe: `<!-- NeighborhoodIntel — Simple iframe embed -->
+<!-- Replace ZIP_CODE with any 5-digit US ZIP -->
+<iframe
+  src="https://neighborhoodintel.onrender.com/report/ZIP_CODE"
+  width="100%"
+  height="860"
+  style="border:none; border-radius:8px;"
+  title="Neighborhood Crime Report">
+</iframe>`,
+
+    react: `// NeighborhoodIntel React Component
+import { useState } from 'react';
+
+function NeighborhoodIntel({ defaultZip = '' }) {
+  const [zip, setZip] = useState(defaultZip);
+  const [active, setActive] = useState(defaultZip);
+
+  return (
+    <div style={{ fontFamily: 'sans-serif' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input
+          value={zip}
+          onChange={e => setZip(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && setActive(zip)}
+          placeholder="Enter ZIP code"
+          maxLength={5}
+          style={{ padding: '10px 14px', borderRadius: 8,
+                   border: '1px solid #e2e8f0', flex: 1 }}
+        />
+        <button
+          onClick={() => setActive(zip)}
+          style={{ padding: '10px 20px', background: '#2563eb',
+                   color: '#fff', border: 'none', borderRadius: 8,
+                   cursor: 'pointer', fontWeight: 700 }}>
+          Search
+        </button>
+      </div>
+      {active && (
+        <iframe
+          key={active}
+          src={\`https://neighborhoodintel.onrender.com/report/\${active}\`}
+          width="100%" height="860"
+          style={{ border: 'none', borderRadius: 8 }}
+          title="Neighborhood Crime Report"
+        />
+      )}
+    </div>
+  );
+}
+
+export default NeighborhoodIntel;`
+  };
+
+  function niSearch() {
+    const zip = document.getElementById('niZipInput').value.trim();
+    if (zip.length === 5 && /^\d{5}$/.test(zip)) {
+      niLoad(zip);
+    } else {
+      niSetStatus('error', '⚠ Please enter a valid 5-digit ZIP code.');
+    }
+  }
+
+  function niLoad(zip) {
+    document.getElementById('niZipInput').value = zip;
+    currentZip = zip;
+
+    const btn = document.getElementById('niSearchBtn');
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+
+    niSetStatus('loading', `Generating report for ZIP ${zip}… this may take 5–15 seconds.`);
+
+    document.getElementById('niPlaceholder').style.display = 'none';
+    const frame = document.getElementById('niFrame');
+    frame.classList.remove('visible');
+
+    // Load in the iframe
+    frame.onload = function() {
+      btn.disabled = false;
+      btn.textContent = 'Search →';
+      frame.classList.add('visible');
+      niSetStatus('success', `✓ Report loaded for ZIP ${zip}. Scroll down to explore the full report.`);
+      // Update embed code if panel is open
+      if (embedVisible) niShowEmbed(currentEmbedType);
+    };
+
+    frame.onerror = function() {
+      btn.disabled = false;
+      btn.textContent = 'Search →';
+      niSetStatus('error', `Could not load report for ZIP ${zip}. Please try again.`);
+      document.getElementById('niPlaceholder').style.display = 'flex';
+    };
+
+    frame.src = `${API}/report/${zip}`;
+  }
+
+  function niSetStatus(type, msg) {
+    const bar = document.getElementById('niStatus');
+    const text = document.getElementById('niStatusText');
+    bar.className = 'ni-status ' + type;
+
+    // Remove existing spinner
+    const existing = bar.querySelector('.ni-spinner');
+    if (existing) existing.remove();
+
+    if (type === 'loading') {
+      const spinner = document.createElement('div');
+      spinner.className = 'ni-spinner';
+      bar.insertBefore(spinner, text);
+    }
+    text.textContent = msg;
+  }
+
+  function niToggleEmbed() {
+    embedVisible = !embedVisible;
+    const panel = document.getElementById('niEmbedPanel');
+    const btn = document.getElementById('niEmbedToggle');
+    if (embedVisible) {
+      panel.classList.add('visible');
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Hide embed code`;
+      niShowEmbed(currentEmbedType);
+    } else {
+      panel.classList.remove('visible');
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Get embed code`;
+    }
+  }
+
+  function niEmbedTab(type, el) {
+    currentEmbedType = type;
+    document.querySelectorAll('.ni-embed-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    niShowEmbed(type);
+  }
+
+  function niShowEmbed(type) {
+    let code = EMBED_TEMPLATES[type];
+    // If a ZIP is active, inject it into the iframe template
+    if (type === 'iframe' && currentZip) {
+      code = code.replace('ZIP_CODE', currentZip);
+    }
+    document.getElementById('niEmbedCode').textContent = code;
+    document.getElementById('niCopyCode').textContent = 'Copy';
+  }
+
+  function niCopyCode() {
+    const code = document.getElementById('niEmbedCode').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = document.getElementById('niCopyCode');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+  }
+
+  // Init embed panel with default content
+  niShowEmbed('widget');
+</script>
+</body>
+</html>
